@@ -34,10 +34,14 @@ if __name__ == "__main__":
         choices=("local", "global", "hybrid", "naive"),
         default="hybrid",
     )
+    parser.add_argument(
+        "--test",
+        action="store_true"
+    )
 
     args = parser.parse_args()
 
-    if args.question_dir:
+    if not args.test and args.question_dir:
         with open(args.question_dir, "r") as f:
             questions = [question.rstrip("\n") for question in f]
     else:
@@ -53,8 +57,9 @@ if __name__ == "__main__":
     for question in questions:
         response = rag.query(question, param=QueryParam(mode=args.search_mode, print_reference=False))
         results.append({"response": response, "query": question})
-    with open(f"{args.output_dir}/lightrag_{args.search_mode}_new_prompt_result.json", "w") as f:
-
-        json.dump(results, f, indent=2)
-
+    if not args.test:
+        with open(f"{args.output_dir}/lightrag_{args.search_mode}_new_prompt_result.json", "w") as f:
+            json.dump(results, f, indent=2)
+    else:
+        print(results[0]["response"])
 
