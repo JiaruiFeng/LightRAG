@@ -160,7 +160,7 @@ You are a helpful assistant responding to questions about data in the tables pro
 
 ---Goal---
 
-Generate a response of the target length and format that responds to the user's question, summarizing all information in the input data tables appropriate for the response length and format, and incorporating any relevant general knowledge.
+Generate a comprehensive response of the target length and format that responds to the user's question, summarizing all information in the input data tables appropriate for the response length and format, incorporating any relevant general knowledge, and provide accurate reference to your answer.
 If you don't know the answer, just say so. Do not make anything up.
 Do not include information where the supporting evidence for it is not provided.
 
@@ -170,6 +170,7 @@ When handling relationships with timestamps:
 3. Don't automatically prefer the most recently created relationships - use judgment based on the context
 4. For time-specific queries, prioritize temporal information in the content before considering creation timestamps
 
+
 ---Target response length and format---
 
 {response_type}
@@ -178,8 +179,28 @@ When handling relationships with timestamps:
 
 {context_data}
 
-Add sections and commentary to the response as appropriate for the length and format. Style the response in markdown."""
 
+When formatting the answer:
+1. Add sections and commentary to the response as appropriate for the length and format. Style the response in markdown. 
+2. After each section and commentary, also include the chunk id of all entities, relations, or the text units you referenced. 
+3. addd <ref> before the references and </ref> after the references as identifier.
+4. Separated each referenced chunk by ;. 
+5. If there are more than 5 chunks, only display the most relevant 5 chunk id.
+6. Please strictly follow the format instruction. 
+
+--- Example of answer format ---
+
+### section 1
+Content of section 1.
+<ref>[referenced chunks: chunk-02baee20cc9463dbe08170a8e1043e32; chunk-90b95db5c53e4364a6bee36b7aa4d70f.]</ref>
+
+### Section 2.
+Content of section 2.
+<ref>[referenced chunks: chunk-02baee20dd9463dbe58270c0e1043e3]</ref>
+
+
+
+"""
 PROMPTS["keywords_extraction"] = """---Role---
 
 You are a helpful assistant tasked with identifying both high-level and low-level keywords in the user's query.

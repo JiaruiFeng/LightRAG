@@ -45,6 +45,7 @@ from .storage import (
 
 from .prompt import GRAPH_FIELD_SEP
 
+import re
 
 # future KG integrations
 
@@ -750,6 +751,9 @@ class LightRAG:
             )
         else:
             raise ValueError(f"Unknown mode {param.mode}")
+        if param.print_reference:
+            response = await self._add_references(response, self.text_chunks)
+
         await self._query_done()
         return response
 
@@ -760,6 +764,37 @@ class LightRAG:
                 continue
             tasks.append(cast(StorageNameSpace, storage_inst).index_done_callback())
         await asyncio.gather(*tasks)
+
+    async def _add_references(self, response, text_chunks_db):
+        section_list = response.split("</ref>")
+        chunk_list = []
+        content_list = []
+
+        for section in section_list:
+            if not section:
+                continue
+            content_ref = section.split("<ref>")
+
+            assert len(content_ref) == 2
+            content, ref = content_ref
+            chunk_ids = re.findall(r'chunk-[a-f0-9]+', ref)
+            chunks = await text_chunks_db.get_by_ids(chunk_ids)
+            chunk_list.append(chunks)
+            content_list.append(content)
+
+        new_response = ""
+        for content, chunks in zip(content_list, chunk_list):
+            new_response += content
+            format_chunks = ""
+            count = 1
+            for chunk in chunks:
+                if not chunk:
+                    continue
+                format_chunks += f"##### Chunk {count}: \n" + chunk["content"] + "\n\n"
+                count += 1
+            new_response += "\n" + "#### References: \n" + format_chunks
+
+        return new_response
 
     def delete_by_entity(self, entity_name: str):
         loop = always_get_an_event_loop()

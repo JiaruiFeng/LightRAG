@@ -563,8 +563,8 @@ async def kg_query(
     cached_response, quantized, min_val, max_val = await handle_cache(
         hashing_kv, args_hash, query, query_param.mode
     )
-    if cached_response is not None:
-        return cached_response
+    # if cached_response is not None:
+    #     return cached_response
 
     example_number = global_config["addon_params"].get("example_number", None)
     if example_number and example_number < len(PROMPTS["keywords_extraction_examples"]):
@@ -794,7 +794,7 @@ async def _get_node_data(
     )
 
     # build prompt
-    entites_section_list = [["id", "entity", "type", "description", "rank"]]
+    entites_section_list = [["id", "entity", "type", "description", "rank", "source_id"]]
     for i, n in enumerate(node_datas):
         entites_section_list.append(
             [
@@ -803,6 +803,7 @@ async def _get_node_data(
                 n.get("entity_type", "UNKNOWN"),
                 n.get("description", "UNKNOWN"),
                 n["rank"],
+                n["source_id"],
             ]
         )
     entities_context = list_of_list_to_csv(entites_section_list)
@@ -817,6 +818,7 @@ async def _get_node_data(
             "weight",
             "rank",
             "created_at",
+            "source_id",
         ]
     ]
     for i, e in enumerate(use_relations):
@@ -834,13 +836,14 @@ async def _get_node_data(
                 e["weight"],
                 e["rank"],
                 created_at,
+                e["source_id"],
             ]
         )
     relations_context = list_of_list_to_csv(relations_section_list)
 
-    text_units_section_list = [["id", "content"]]
+    text_units_section_list = [["source_id", "content"]]
     for i, t in enumerate(use_text_units):
-        text_units_section_list.append([i, t["content"]])
+        text_units_section_list.append([t["id"], t["content"]])
     text_units_context = list_of_list_to_csv(text_units_section_list)
     return entities_context, relations_context, text_units_context
 
@@ -914,7 +917,8 @@ async def _find_most_related_text_unit_from_entities(
         key=lambda x: x["data"]["content"],
         max_token_size=query_param.max_token_for_text_unit,
     )
-
+    for t in all_text_units:
+        t["data"]["id"] = t["id"]
     all_text_units = [t["data"] for t in all_text_units]
     return all_text_units
 
@@ -980,6 +984,7 @@ async def _get_edge_data(
     edge_degree = await asyncio.gather(
         *[knowledge_graph_inst.edge_degree(r["src_id"], r["tgt_id"]) for r in results]
     )
+
     edge_datas = [
         {
             "src_id": k["src_id"],
@@ -1020,6 +1025,7 @@ async def _get_edge_data(
             "weight",
             "rank",
             "created_at",
+            "source_id",
         ]
     ]
     for i, e in enumerate(edge_datas):
@@ -1037,11 +1043,12 @@ async def _get_edge_data(
                 e["weight"],
                 e["rank"],
                 created_at,
+                e["source_id"],
             ]
         )
     relations_context = list_of_list_to_csv(relations_section_list)
 
-    entites_section_list = [["id", "entity", "type", "description", "rank"]]
+    entites_section_list = [["id", "entity", "type", "description", "rank", "source_id"]]
     for i, n in enumerate(use_entities):
         entites_section_list.append(
             [
@@ -1050,13 +1057,14 @@ async def _get_edge_data(
                 n.get("entity_type", "UNKNOWN"),
                 n.get("description", "UNKNOWN"),
                 n["rank"],
+                n["source_id"]
             ]
         )
     entities_context = list_of_list_to_csv(entites_section_list)
 
     text_units_section_list = [["id", "content"]]
     for i, t in enumerate(use_text_units):
-        text_units_section_list.append([i, t["content"]])
+        text_units_section_list.append([t["id"], t["content"]])
     text_units_context = list_of_list_to_csv(text_units_section_list)
     return entities_context, relations_context, text_units_context
 
@@ -1142,7 +1150,8 @@ async def _find_related_text_unit_from_relationships(
         key=lambda x: x["data"]["content"],
         max_token_size=query_param.max_token_for_text_unit,
     )
-
+    for t in truncated_text_units:
+        t["data"]["id"] = t["id"]
     all_text_units: list[TextChunkSchema] = [t["data"] for t in truncated_text_units]
 
     return all_text_units

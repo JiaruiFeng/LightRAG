@@ -26,11 +26,13 @@ class QueryParam:
     # Number of document chunks to retrieve.
     # top_n: int = 10
     # Number of tokens for the original chunks.
-    max_token_for_text_unit: int = 4000
+    max_token_for_text_unit: int = 5000
     # Number of tokens for the relationship descriptions
-    max_token_for_global_context: int = 4000
+    max_token_for_global_context: int = 6000
     # Number of tokens for the entity descriptions
-    max_token_for_local_context: int = 4000
+    max_token_for_local_context: int = 6000
+    # If true, print the detail of referenced chunks
+    print_reference: bool = True
 
 
 @dataclass
