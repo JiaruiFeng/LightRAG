@@ -26,6 +26,8 @@ from .utils import (
     convert_response_to_json,
     logger,
     set_logger,
+    csv_string_to_list,
+    list_of_list_to_csv
 )
 from .base import (
     BaseGraphStorage,
@@ -751,11 +753,20 @@ class LightRAG:
             )
         else:
             raise ValueError(f"Unknown mode {param.mode}")
+
+        if param.return_context:
+            response, context_table = response
+
         if param.print_reference:
             response = await self._add_references(response, self.text_chunks)
 
         await self._query_done()
-        return response
+
+        if param.return_context:
+            context_table = await self._context_to_raw_chunk(context_table, self.text_chunks)
+            return response, context_table
+        else:
+            return response
 
     async def _query_done(self):
         tasks = []
@@ -764,6 +775,43 @@ class LightRAG:
                 continue
             tasks.append(cast(StorageNameSpace, storage_inst).index_done_callback())
         await asyncio.gather(*tasks)
+
+    async  def _context_to_raw_chunk(self, context_table, text_chunks_db):
+        entities, edges, sources = context_table
+
+        if len(entities) == 2:
+            entity_table = csv_string_to_list(entities[0])
+            entity_table.extend(csv_string_to_list(entities[1])[1:])
+        else:
+            entity_table = csv_string_to_list(entities)
+
+        if len(edges) == 2:
+            edge_table = csv_string_to_list(edges[0])
+            edge_table.extend(csv_string_to_list(edges[1])[1:])
+        else:
+            edge_table = csv_string_to_list(edges)
+
+        if len(sources) == 2:
+            source_table = csv_string_to_list(sources[0])
+            source_table.extend(csv_string_to_list(sources[1])[1:])
+        else:
+            source_table = csv_string_to_list(sources)
+
+        for table in [entity_table, edge_table]:
+            for row in table:
+                chunk_ids = row[-1]
+                if chunk_ids == "source_id":
+                    row.append("raw_chunks")
+                else:
+                    raw_chunks = await text_chunks_db.get_by_ids(chunk_ids.split("<SEP>"))
+                    if isinstance(raw_chunks, list):
+                        raw_chunks = [chunk["content"] for chunk in raw_chunks if chunk]
+                        row.append("<SEP>".join(raw_chunks))
+                    else:
+                        row.append("")
+        return entity_table, edge_table, source_table
+
+
 
     async def _add_references(self, response, text_chunks_db):
         section_list = response.split("</ref>")

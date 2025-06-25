@@ -638,6 +638,8 @@ async def kg_query(
         text_chunks_db,
         query_param,
     )
+    if query_param.return_context:
+        context, context_table = context
 
     if query_param.only_need_context:
         return context
@@ -678,7 +680,10 @@ async def kg_query(
             mode=query_param.mode,
         ),
     )
-    return response
+    if query_param.return_context:
+        return response, context_table
+    else:
+        return response
 
 
 async def _build_query_context(
@@ -738,6 +743,23 @@ async def _build_query_context(
             [hl_relations_context, ll_relations_context],
             [hl_text_units_context, ll_text_units_context],
         )
+    if query_param.return_context:
+        return f"""
+        -----Entities-----
+        ```csv
+        {entities_context}
+        ```
+        -----Relationships-----
+        ```csv
+        {relations_context}
+        ```
+        -----Sources-----
+        ```csv
+        {text_units_context}
+        ```
+        """, ([hl_entities_context, ll_entities_context],
+            [hl_relations_context, ll_relations_context],
+            [hl_text_units_context, ll_text_units_context],)
     return f"""
 -----Entities-----
 ```csv

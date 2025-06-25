@@ -6,6 +6,7 @@ from lightrag.llm import gpt_4o_complete, gpt_4o_mini_complete
 import argparse
 import json
 from pathlib import Path
+import pandas as pd
 
 
 if __name__ == "__main__":
@@ -45,7 +46,7 @@ if __name__ == "__main__":
         with open(args.question_dir, "r") as f:
             questions = [question.rstrip("\n") for question in f]
     else:
-        questions = ["How do amyloid beta circadian patterns change with respect to age and amyloid pathology"]
+        questions = ["What can the plasma 42:40 biomarker tell you about your risk for becoming PET positive in the future?"]
 
     rag = LightRAG(
         working_dir=args.root_dir,
@@ -55,11 +56,15 @@ if __name__ == "__main__":
 
     results = []
     for question in questions:
-        response = rag.query(question, param=QueryParam(mode=args.search_mode, print_reference=False))
+        response, context_table = rag.query(question, param=QueryParam(mode=args.search_mode, print_reference=False, return_context=True))
         results.append({"response": response, "query": question})
     if not args.test:
-        with open(f"{args.output_dir}/lightrag_{args.search_mode}_new_prompt_result.json", "w") as f:
+        with open(f"{args.output_dir}/lightrag_{args.search_mode}_comprehensive_result.json", "w") as f:
             json.dump(results, f, indent=2)
     else:
         print(results[0]["response"])
+        entity_table, edge_table, source_table = context_table
+        pd.DataFrame(entity_table).to_csv(f"{args.output_dir}/lightrag_reference_entity.csv", index=False)
+        pd.DataFrame(edge_table).to_csv(f"{args.output_dir}/lightrag_reference_edge.csv", index=False)
+        pd.DataFrame(source_table).to_csv(f"{args.output_dir}/lightrag_reference_source.csv", index=False)
 

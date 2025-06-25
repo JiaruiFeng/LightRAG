@@ -33,6 +33,7 @@ class QueryParam:
     max_token_for_local_context: int = 6000
     # If true, print the detail of referenced chunks
     print_reference: bool = True
+    return_context: bool = False
 
 
 @dataclass
